@@ -1,0 +1,30 @@
+---
+title: "2024-06-09_Claims_Prediction"
+author: "Pedram Azimzadeh"
+date: "2024-06-09"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+library(dplyr)
+```
+
+
+
+```{r include=FALSE}
+data <- read.csv("insurance.csv")
+data <- data %>% mutate(across(c(region, smoker, sex), as.factor))
+```
+
+```{r include=FALSE}
+names(data)
+```
+
+```{r}
+
+```
+
