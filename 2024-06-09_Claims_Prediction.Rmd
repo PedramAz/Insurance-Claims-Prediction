@@ -10,21 +10,144 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
+# Load necessary libraries
+library(caret)
+library(e1071)  # For SVM
+library(gbm)    # For Gradient Boosting
+library(class)  # For K-Nearest Neighbors
 library(dplyr)
+library(kernlab)
+library(pls)    # For Principal Component Regression
 ```
 
 
 
 ```{r include=FALSE}
-data <- read.csv("insurance.csv")
-data <- data %>% mutate(across(c(region, smoker, sex), as.factor))
+insurance <- read.csv("insurance.csv")
+insurance <- insurance %>% mutate(across(c(region, smoker, sex), as.factor))
 ```
 
 ```{r include=FALSE}
-names(data)
+names(insurance)
 ```
 
 ```{r}
+# Split the data into training and testing sets
+set.seed(123)  # For reproducibility
+trainIndex <- createDataPartition(insurance$charges, p = .8, 
+                                  list = FALSE, 
+                                  times = 1)
+insuranceTrain <- insurance[ trainIndex,]
+insuranceTest  <- insurance[-trainIndex,]
+
+# Standardize the numerical variables
+preProcValues <- preProcess(insuranceTrain, method = c("center", "scale"))
+insuranceTrain <- predict(preProcValues, insuranceTrain)
+insuranceTest <- predict(preProcValues, insuranceTest)
+```
+
+
+```{r}
+# Linear Regression
+lm_model <- train(charges ~ ., data = insuranceTrain, method = "lm")
+
+lm_predictions <- predict(lm_model, insuranceTest)
+lm_rmse <- RMSE(lm_predictions, insuranceTest$charges)
+```
+
+
+```{r}
+# K-Nearest Neighbors
+knn_model <- train(charges ~ ., data = insuranceTrain, method = "knn", tuneLength = 10)
+
+knn_predictions <- predict(knn_model, insuranceTest)
+knn_rmse <- RMSE(knn_predictions, insuranceTest$charges)
+```
+
+
+```{r}
+# Support Vector Machines
+svm_model <- train(charges ~ ., data = insuranceTrain, method = "svmRadial")
+
+svm_predictions <- predict(svm_model, insuranceTest)
+svm_rmse <- RMSE(svm_predictions, insuranceTest$charges)
+```
+
+
+```{r}
+# Gradient Boosting
+gbm_model <- train(charges ~ ., data = insuranceTrain, method = "gbm", verbose = FALSE)
+
+gbm_predictions <- predict(gbm_model, insuranceTest)
+gbm_rmse <- RMSE(gbm_predictions, insuranceTest$charges)
+```
+
+
+```{r}
+# Compare RMSE of different models
+model_results <- data.frame(
+  Model = c("Linear Regression", "K-Nearest Neighbors", "Support Vector Machines", "Gradient Boosting"),
+  RMSE = c(lm_rmse, knn_rmse, svm_rmse, gbm_rmse)
+)
+
+print(model_results)
+
+```
+
+
+
+```{r}
+# Convert categorical variables to factors
+insurance$sex <- as.factor(insurance$sex)
+insurance$smoker <- as.factor(insurance$smoker)
+insurance$region <- as.factor(insurance$region)
+
+# Split the data into training and testing sets
+set.seed(123)
+trainIndex <- createDataPartition(insurance$charges, p = .8, 
+                                  list = FALSE, 
+                                  times = 1)
+insuranceTrain <- insurance[ trainIndex,]
+insuranceTest  <- insurance[-trainIndex,]
+
+# Standardize the numerical variables
+preProcValues <- preProcess(insuranceTrain, method = c("center", "scale"))
+insuranceTrain <- predict(preProcValues, insuranceTrain)
+insuranceTest <- predict(preProcValues, insuranceTest)
+
+# Linear Regression
+lm_model <- train(charges ~ ., data = insuranceTrain, method = "lm")
+lm_predictions <- predict(lm_model, insuranceTest)
+lm_performance <- postResample(lm_predictions, insuranceTest$charges)
+
+# K-Nearest Neighbors
+knn_model <- train(charges ~ ., data = insuranceTrain, method = "knn", tuneLength = 10)
+knn_predictions <- predict(knn_model, insuranceTest)
+knn_performance <- postResample(knn_predictions, insuranceTest$charges)
+
+# Support Vector Machines
+svm_model <- train(charges ~ ., data = insuranceTrain, method = "svmRadial")
+svm_predictions <- predict(svm_model, insuranceTest)
+svm_performance <- postResample(svm_predictions, insuranceTest$charges)
+
+# Gradient Boosting
+gbm_model <- train(charges ~ ., data = insuranceTrain, method = "gbm", verbose = FALSE)
+gbm_predictions <- predict(gbm_model, insuranceTest)
+gbm_performance <- postResample(gbm_predictions, insuranceTest$charges)
+
+# Principal Component Regression
+pcr_model <- train(charges ~ ., data = insuranceTrain, method = "pcr", tuneLength = 10)
+pcr_predictions <- predict(pcr_model, insuranceTest)
+pcr_performance <- postResample(pcr_predictions, insuranceTest$charges)
+
+# Compare RMSE and R-squared of different models
+model_results <- data.frame(
+  Model = c("Linear Regression", "K-Nearest Neighbors", "Support Vector Machines", "Gradient Boosting", "Principal Component Regression"),
+  RMSE = c(lm_performance["RMSE"], knn_performance["RMSE"], svm_performance["RMSE"], gbm_performance["RMSE"], pcr_performance["RMSE"]),
+  R_squared = c(lm_performance["Rsquared"], knn_performance["Rsquared"], svm_performance["Rsquared"], gbm_performance["Rsquared"], pcr_performance["Rsquared"])
+)
+
+print(model_results)
 
 ```
 
